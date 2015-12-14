@@ -33,7 +33,7 @@ FichierTXT=path+'_'+date1+'.txt'
 CreateFile(FichierTXT)
 
 # driver = ogr.GetDriverByName("ESRI Shapefile")
-
+"""TODO Postgis"""
 driverlist=["MapInfo File","ESRI Shapefile"]
 for i in driverlist:
 	driver = ogr.GetDriverByName(i)
