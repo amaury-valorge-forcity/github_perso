@@ -13,15 +13,20 @@ import qgis
 import unicodedata
 import subprocess
 
-''' definition des variables '''
+""" 
+definition des variables 
+mode = 'full' => export shp + qml + sld
+mode = 'sld' => export sld only
+epsg = None => no reprojection
+epsg = 2154 => reprojection to 2154
+"""
+
 mode = 'full'
-# mode 'sld' 
-# mode "full' = export shp + qml + sld
+#mode = 'sld'
 epsg = None
-# None = pas de reprojection ; 3946 reprojection en 3946
 
 
-''' creation du repertoire de sortie '''
+""" creation du repertoire de sortie """
 repertoire0 = '%s/%s/%s%s' % (os.path.expanduser('~'),'temp','export_',time.strftime("%d%m%y_%H%M%S"))
 date=time.strftime("%d%m%y")
 try:
@@ -30,16 +35,16 @@ except OSError:
 	pass
 os.makedirs(repertoire0)
 
-''' recuperation les couches ouvertes dans la session et boucle'''
+""" recuperation les couches ouvertes dans la session et boucle"""
 count=0
 for layer in QgsMapLayerRegistry.instance().mapLayers().values():
-	''' recuperation du nom du fichier '''
+	""" recuperation du nom du fichier """
 	pathlayer=layer.dataProvider().dataSourceUri()
 	(myDirectory,nameFile) = os.path.split(pathlayer)
 
 	try:
 		typeformat = None 
-		''' test si la couche est au format pg'''
+		""" test si la couche est au format pg"""
 		if "(geom)" in nameFile:
 			nameFileDict=dict(x.split('=') for x in nameFile[:-12].split(' '))
 			print nameFileDict
@@ -48,31 +53,31 @@ for layer in QgsMapLayerRegistry.instance().mapLayers().values():
 			nameFileDict=dict(x.split('=') for x in nameFile[:-5].split(' '))
 		name=nameFileDict['table'].split('.')[1]
 		schem=nameFileDict['table'].split('.')[0]
-		'''conversion en caracteres ascii '''
+		"""conversion en caracteres ascii """
 		name=unicodedata.normalize('NFKD', name[1:-1]).encode('ASCII', 'ignore')
 		schem=unicodedata.normalize('NFKD', schem[1:-1]).encode('ASCII', 'ignore')
 	except ValueError:
 		schem = None
 		try:
-			''' test si la couche est au format wfs'''
+			""" test si la couche est au format wfs"""
 			typeformat = None 
 			nameFileDict=dict(x.split('=') for x in nameFile.split('&'))
 			name=nameFileDict['TYPENAME'].split(':')[1]
 			name=unicodedata.normalize('NFKD', name).encode('ASCII', 'ignore')
 		except KeyError:
-			''' test si la couche est au format fichier'''
+			""" test si la couche est au format fichier"""
 			if ".dbf" in nameFile or ".csv" in nameFile:
 				typeformat = "tab"
 			nameext=nameFile.split('|')
-			''' conversion en caracteres ascii '''
+			""" conversion en caracteres ascii """
 			name=unicodedata.normalize('NFKD', nameext[0].split('.')[0]).encode('ASCII', 'ignore')
 
-	''' suppression des caracteres de ponctuation et espace '''
+	""" suppression des caracteres de ponctuation et espace """
 	name=name.replace(" ","_")
 	list_pct = [",",".","-","?","'","[","]","(",")","{","}","@","=","+","#","~","}","*","!",":",";","/","\\"]
 	name=''.join([i if i not in list_pct else '' for i in name ])
 	name=name.lower()
-	''' si data pg alors creation d'une repertoire au nom du schema'''
+	""" si data pg alors creation d'une repertoire au nom du schema"""
 	if schem is not None:
 		schem=schem.replace(" ","_")
 		list_pct = [",",".","-","?","'","[","]","(",")","{","}","@","=","+","#","~","}","*","!",":",";","/","\\"]
@@ -89,7 +94,7 @@ for layer in QgsMapLayerRegistry.instance().mapLayers().values():
 	if mode == 'full':
 		if typeformat is None:
 			if epsg is not None:
-				''' recuperation de la projection defini par l'user '''
+				""" recuperation de la projection defini par l'user """
 				exp_crs = QgsCoordinateReferenceSystem(epsg, QgsCoordinateReferenceSystem.EpsgCrsId)
 				output='%s/%s_%s' % (repertoire1, name, date, str(epsg))
 			else:
@@ -100,20 +105,20 @@ for layer in QgsMapLayerRegistry.instance().mapLayers().values():
 
 		if typeformat is None:
 			QgsVectorFileWriter.writeAsVectorFormat(layer, output, "utf-8", exp_crs, "ESRI Shapefile")
-			''' creation dun index spatial qix '''
+			""" creation dun index spatial qix """
 			vct = QgsVectorLayer(output, "tmp", "ogr" )
 			provider = vct.dataProvider()
 			encoding=provider.encoding()
 			#vct.setProviderEncoding(u'UTF-8')
 			#vct.dataProvider().setEncoding(u'UTF-8')
 			provider.createSpatialIndex()
-			''' export du qml '''
+			""" export du qml """
 			layer.saveNamedStyle('%s.qml' % (output))
 		else:
 			QgsVectorFileWriter.writeAsVectorFormat(layer, output, 'utf-8', None, 'CSV')
 
 	if (mode == 'full' or mode == 'sld') and typeformat is None:
-		''' export du sld '''
+		""" export du sld """
 		layer.saveSldStyle('%s/%s.sld' % (repertoire1,name))
 
 	count+=1
